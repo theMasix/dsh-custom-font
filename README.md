@@ -39,28 +39,38 @@ Plugins page. Everything is disposed with the plugin through `ctx.effect`.
 
 ## Fonts
 
-The bundled stacks reference two families, and **no font binaries ship with this
-plugin**. Each `@font-face` resolves in this order:
+The bundled stacks reference two installed families. **Nothing is downloaded and
+no font files ship with this plugin** — it assumes both are already installed in
+Font Book (`~/Library/Fonts`):
 
-1. `local()` — if the family is already installed (Font Book, `~/Library/Fonts`),
-   the browser uses it and makes **no network request**.
-2. A pinned jsDelivr URL — the fallback when it is not installed.
+| Family | Used for |
+| --- | --- |
+| Estedad | text stack |
+| Vazirmatn | code + terminal (via the stack fallback) |
 
-| Family | Used for | Source |
-| --- | --- | --- |
-| Estedad | text stack | [`@fontsource/estedad@5.3.0`](https://cdn.jsdelivr.net/npm/@fontsource/estedad@5.3.0/) |
-| Vazirmatn | code + terminal | [`vazirmatn@33.0.3`](https://cdn.jsdelivr.net/npm/vazirmatn@33.0.3/Vazirmatn-font-face.css) |
+If a family is missing, that role simply falls through to the next name in the
+stack (`-apple-system`, `Segoe UI`, …) — the UI stays readable, it just is not
+using the intended face. There is no automatic acquisition.
 
-Both are **SIL Open Font License 1.1**. The plugin redistributes no font files:
-the binaries stay on the CDN under their own license and are only referenced.
-If you prefer a fully offline setup, install both families locally and the
-network is never touched.
+### Why there are still `@font-face` blocks
 
-Estedad is subset-split by Fontsource, so a Persian UI downloads only the
-`arabic` subset (~27 KB per weight); `latin` arrives only if Latin glyphs render.
+They carry no URLs; every `src` is `local()`. Their only job is the **weight
+mapping** — declaring which installed file answers to `400` and `600`, including
+Medium and SemiBold. Without them the browser would pick a single face and
+synthesize the rest, and faux-bold renders badly on Persian.
 
-**Pinned versions are deliberate.** These are immutable CDN URLs — bumping one
-is a behavioral change and should be a conscious commit.
+Names must match the installed faces exactly. The four declared pairs were
+verified with `fc-query` against the files in `~/Library/Fonts`:
+
+```text
+Estedad Regular  / Estedad-Regular   (Family: Estedad)
+Estedad SemiBold / Estedad-SemiBold  (Family: Estedad)
+Vazirmatn Regular  / Vazirmatn-Regular
+Vazirmatn SemiBold / Vazirmatn-SemiBold
+```
+
+Only Regular and SemiBold are declared. Other installed weights still resolve
+through the regular family name in the stack; they are not explicitly mapped.
 
 ### Why the faces are inlined in `client.js`
 

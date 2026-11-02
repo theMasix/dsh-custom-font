@@ -19,31 +19,30 @@ window.__ModuleLoader__.load({
     const NS = 'plugin.custom-font';
     const STORAGE_KEY = 'dsh-custom-font:stacks';
 
-    /* Bundled @font-face declarations.
+    /* Weight mapping for the two installed families.
      *
-     * These are inlined into the plugin's own <style>, not linked as a separate
+     * No font files are shipped and nothing is fetched: the UI assumes Estedad
+     * and Vazirmatn are already installed (Font Book / ~/Library/Fonts). The
+     * @font-face blocks below exist only to map real weights, so `600` picks
+     * Estedad SemiBold instead of a synthesized faux-bold, which renders badly
+     * on Persian. Every src is local(); a missing family simply falls through
+     * to the next family in the stack.
+     *
+     * Names must match the installed faces exactly. Verified against the
+     * installed files with fc-query:
+     *   Estedad Regular    / Estedad-Regular    (Family: Estedad)
+     *   Estedad SemiBold   / Estedad-SemiBold   (Family: Estedad)
+     *
+     * Inlined into this plugin's own <style> rather than linked as a separate
      * stylesheet: the Host serves only `client*.js` and its `.map` under
      * /plugins/<package>/, so a sibling `fonts.css` has no route and would 404.
-     * The plugin executes as a classic script, so `import.meta.url` is not
-     * available either. Inlining is the only transport that works for every
-     * install kind (link:, tarball, github:).
-     *
-     * Font files themselves are never shipped: `local()` resolves installed
-     * copies first and the pinned CDN URL is the fallback. */
+     * The plugin runs as a classic script, where `import.meta.url` does not
+     * exist either. */
     const FONTS_CSS = String.raw`
-@import url('https://cdn.jsdelivr.net/npm/vazirmatn@33.0.3/Vazirmatn-font-face.css');
-@import url('https://cdn.jsdelivr.net/npm/@fontsource/estedad@5.3.0/400.css');
-@import url('https://cdn.jsdelivr.net/npm/@fontsource/estedad@5.3.0/600.css');
-
-/* Estedad with local() ahead of the CDN URL, so an installed copy is used
- * without any network request. A later matching @font-face wins over the
- * @import-ed one; unicode-range keeps the per-subset fetching intact.
- * Only the arabic and latin subsets are declared — the UI never renders
- * Vietnamese or Latin-Extended, so those never need to be requested. */
-@font-face{font-family:'Estedad';font-style:normal;font-display:swap;font-weight:400;src:local('Estedad Regular'),local('Estedad-Regular'),url('https://cdn.jsdelivr.net/npm/@fontsource/estedad@5.3.0/files/estedad-arabic-400-normal.woff2') format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
-@font-face{font-family:'Estedad';font-style:normal;font-display:swap;font-weight:400;src:local('Estedad Regular'),local('Estedad-Regular'),url('https://cdn.jsdelivr.net/npm/@fontsource/estedad@5.3.0/files/estedad-latin-400-normal.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
-@font-face{font-family:'Estedad';font-style:normal;font-display:swap;font-weight:600;src:local('Estedad SemiBold'),local('Estedad-SemiBold'),url('https://cdn.jsdelivr.net/npm/@fontsource/estedad@5.3.0/files/estedad-arabic-600-normal.woff2') format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
-@font-face{font-family:'Estedad';font-style:normal;font-display:swap;font-weight:600;src:local('Estedad SemiBold'),local('Estedad-SemiBold'),url('https://cdn.jsdelivr.net/npm/@fontsource/estedad@5.3.0/files/estedad-latin-600-normal.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Estedad';font-style:normal;font-weight:400;src:local('Estedad Regular'),local('Estedad-Regular')}
+@font-face{font-family:'Estedad';font-style:normal;font-weight:600;src:local('Estedad SemiBold'),local('Estedad-SemiBold')}
+@font-face{font-family:'Vazirmatn';font-style:normal;font-weight:400;src:local('Vazirmatn Regular'),local('Vazirmatn-Regular')}
+@font-face{font-family:'Vazirmatn';font-style:normal;font-weight:600;src:local('Vazirmatn SemiBold'),local('Vazirmatn-SemiBold')}
 `;
 
     const ROLES = ['text', 'code', 'terminal'];

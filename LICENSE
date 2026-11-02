@@ -24,12 +24,15 @@ SOFTWARE.
 
 ## Third-party fonts
 
-This plugin does not bundle font files. It references, over pinned CDN URLs:
+This plugin bundles and downloads **no font files**. It only names font families
+that are expected to already be installed on the user's machine, so their
+licensing is between the user and the font's authors:
 
 - **Estedad** — Copyright (c) 2020 Amin Abedi (fontamin.com).
   SIL Open Font License 1.1. https://github.com/aminabedi68/Estedad
 - **Vazirmatn** — Copyright 2015 The Vazirmatn Project Authors.
   SIL Open Font License 1.1. https://github.com/rastikerdar/vazirmatn
 
-Both are distributed under the SIL Open Font License 1.1 and remain the
-property of their respective authors.
+Neither font is redistributed here. If you later ship either font's binaries
+with this plugin, that is permitted under the OFL 1.1 provided you include the
+OFL license text and preserve the Reserved Font Name terms.
