@@ -81,6 +81,18 @@ window.__ModuleLoader__.load({
         'font.terminal.description': 'Sidebar terminal.',
         summary: 'Custom fonts',
       },
+      fa: {
+        title: 'فونت‌ها',
+        hint: 'تا زمانی اعمال می‌شود که فیلدهای فونت در «ظاهر» خالی باشند. برای استفاده از پشتهٔ پیش‌فرض، فیلد را خالی بگذارید.',
+        placeholder: 'پیش‌فرض',
+        'font.text.title': 'فونت متن',
+        'font.text.description': 'متن رابط کاربری و گفت‌وگو.',
+        'font.code.title': 'فونت کد',
+        'font.code.description': 'بلوک‌های کد، کد درون‌خطی و خروجی ابزارها.',
+        'font.terminal.title': 'فونت ترمینال',
+        'font.terminal.description': 'ترمینال نوار کناری.',
+        summary: 'فونت‌های سفارشی',
+      },
       zh: {
         title: '字体',
         hint: '仅在“外观”字体字段为空时生效；留空则使用内置字体栈。',

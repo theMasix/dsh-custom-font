@@ -3,6 +3,25 @@
 Editable **default font stacks** for the DeepSeek Harness Web UI: text
 (interface and conversation), code blocks, and the sidebar terminal.
 
+## Install
+
+Either path works — no local clone needed:
+
+**Web UI:** open **Plugins** in the sidebar, choose install, and enter:
+
+```text
+github:theMasix/dsh-custom-font
+```
+
+**CLI:**
+
+```bash
+dsh plugin add github:theMasix/dsh-custom-font
+```
+
+Then reload the page. Remove it the same way (Plugins page, or
+`dsh plugin remove dsh-custom-font`).
+
 ## Where to edit
 
 **Plugins → Installed → dsh-custom-font** opens the bundle page; the font fields
@@ -39,28 +58,36 @@ Plugins page. Everything is disposed with the plugin through `ctx.effect`.
 
 ## Fonts
 
-The bundled stacks reference two installed families. **Nothing is downloaded and
-no font files ship with this plugin** — it assumes both are already installed in
-Font Book (`~/Library/Fonts`):
+The default text stack references two installed families. **Nothing is
+downloaded and no font files ship with this plugin** — it assumes both are
+already installed (Font Book on macOS, the system font folder on Windows/Linux):
 
-| Family | Used for |
+| Family | Role |
 | --- | --- |
-| Estedad | text stack |
-| Vazirmatn | code + terminal (via the stack fallback) |
+| Estedad | first choice of the **text** stack |
+| Vazirmatn | fallback within that same text stack, if Estedad is absent |
 
-If a family is missing, that role simply falls through to the next name in the
-stack (`-apple-system`, `Segoe UI`, …) — the UI stays readable, it just is not
-using the intended face. There is no automatic acquisition.
+The `code` and `terminal` stacks default to **empty**, so those roles stay on the
+Harness built-in monospace until you type a stack into their fields.
 
-### Why there are still `@font-face` blocks
+If a family is missing, the text stack falls through to the next name
+(`-apple-system`, `Segoe UI`, …) — the UI stays readable, it just is not using
+the intended face. There is no automatic acquisition or download.
+
+### What the `@font-face` blocks are for
 
 They carry no URLs; every `src` is `local()`. Their only job is the **weight
-mapping** — declaring which installed file answers to `400` and `600`, including
-Medium and SemiBold. Without them the browser would pick a single face and
-synthesize the rest, and faux-bold renders badly on Persian.
+mapping** — declaring which installed file answers to `400` and `600`. Without
+them the browser picks one face and synthesizes the rest, and faux-bold renders
+badly on Persian.
 
-Names must match the installed faces exactly. The four declared pairs were
-verified with `fc-query` against the files in `~/Library/Fonts`:
+Only **Regular and SemiBold** are mapped, for both families. Other installed
+weights (Medium, Bold, …) still work, but resolve through the browser's own
+fallback rather than an explicit mapping.
+
+The generated names come from `INSTALLED_FONTS` in `client.js`, each face tried
+as both `<Family> <Face>` and `<Family>-<Face>`, which covers how macOS titles
+faces versus how the files are named. Verified with `fc-query`:
 
 ```text
 Estedad Regular  / Estedad-Regular   (Family: Estedad)
@@ -69,16 +96,14 @@ Vazirmatn Regular  / Vazirmatn-Regular
 Vazirmatn SemiBold / Vazirmatn-SemiBold
 ```
 
-Only Regular and SemiBold are declared. Other installed weights still resolve
-through the regular family name in the stack; they are not explicitly mapped.
+### Why everything lives in `client.js`
 
-### Why the faces are inlined in `client.js`
-
-The Host serves only `client*.js` and its source maps under
-`/plugins/<package>/`, so a sibling `fonts.css` has no route and would 404. The
-plugin also runs as a classic script, where `import.meta.url` does not exist.
-Inlining the `@font-face` blocks into the plugin's own `<style>` is therefore the
-one transport that works for `link:`, tarball, and `github:` installs alike.
+The Host serves only `client*.js` and its `.map` under `/plugins/<package>/`, so
+a sibling `fonts.css` has no route and would 404. The plugin also runs as a
+**classic script**, where `import`, `import.meta.url`, and top-level bindings
+(which would pollute the page's global scope) are all unavailable. Keeping the
+rules inline in the single factory is therefore not a style preference — it is
+the only transport that works for `link:`, tarball, and `github:` installs alike.
 
 ## Uninstall
 

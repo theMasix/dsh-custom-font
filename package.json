@@ -1,13 +1,13 @@
 {
   "name": "dsh-custom-font",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "description": "Applies a default text, code, and terminal font stack to the DeepSeek Harness Web UI.",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ireza7/dsh-custom-font"
+    "url": "https://github.com/theMasix/dsh-custom-font"
   },
   "exports": {
     ".": "./index.js",
@@ -35,5 +35,18 @@
         "@deepseek-ai/dsh-client-ui-theme"
       ]
     }
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/theMasix/dsh-custom-font/issues"
+  },
+  "homepage": "https://github.com/theMasix/dsh-custom-font#readme",
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "fonts",
+    "font-stack",
+    "persian",
+    "estedad",
+    "vazirmatn"
+  ]
 }
