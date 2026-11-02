@@ -1,0 +1,215 @@
+/**
+ * dsh-custom-font — user-editable default font stacks for the Harness Web UI.
+ *
+ * The fields live on the bundle's page in Plugins → Installed → dsh-custom-font
+ * (the `plugins.bundle.config` slot, keyed by this package name). Values are
+ * stored in localStorage and applied immediately as `--dsh-font-family-<role>`
+ * on <body>.
+ *
+ * Precedence: the shipped Appearance font rows write an inline value on <body>
+ * when filled, and this plugin's stylesheet loses to inline styles — so the
+ * built-in Settings still win whenever a role has a value there.
+ */
+window.__ModuleLoader__.load({
+  id: 'dsh-custom-font',
+  factory(require) {
+    const React = require('react');
+    const h = React.createElement;
+
+    const NS = 'plugin.custom-font';
+    const STORAGE_KEY = 'dsh-custom-font:stacks';
+
+    /* Bundled @font-face declarations.
+     *
+     * These are inlined into the plugin's own <style>, not linked as a separate
+     * stylesheet: the Host serves only `client*.js` and its `.map` under
+     * /plugins/<package>/, so a sibling `fonts.css` has no route and would 404.
+     * The plugin executes as a classic script, so `import.meta.url` is not
+     * available either. Inlining is the only transport that works for every
+     * install kind (link:, tarball, github:).
+     *
+     * Font files themselves are never shipped: `local()` resolves installed
+     * copies first and the pinned CDN URL is the fallback. */
+    const FONTS_CSS = String.raw`
+@import url('https://cdn.jsdelivr.net/npm/vazirmatn@33.0.3/Vazirmatn-font-face.css');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource/estedad@5.3.0/400.css');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource/estedad@5.3.0/600.css');
+
+/* Estedad with local() ahead of the CDN URL, so an installed copy is used
+ * without any network request. A later matching @font-face wins over the
+ * @import-ed one; unicode-range keeps the per-subset fetching intact.
+ * Only the arabic and latin subsets are declared — the UI never renders
+ * Vietnamese or Latin-Extended, so those never need to be requested. */
+@font-face{font-family:'Estedad';font-style:normal;font-display:swap;font-weight:400;src:local('Estedad Regular'),local('Estedad-Regular'),url('https://cdn.jsdelivr.net/npm/@fontsource/estedad@5.3.0/files/estedad-arabic-400-normal.woff2') format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
+@font-face{font-family:'Estedad';font-style:normal;font-display:swap;font-weight:400;src:local('Estedad Regular'),local('Estedad-Regular'),url('https://cdn.jsdelivr.net/npm/@fontsource/estedad@5.3.0/files/estedad-latin-400-normal.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Estedad';font-style:normal;font-display:swap;font-weight:600;src:local('Estedad SemiBold'),local('Estedad-SemiBold'),url('https://cdn.jsdelivr.net/npm/@fontsource/estedad@5.3.0/files/estedad-arabic-600-normal.woff2') format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
+@font-face{font-family:'Estedad';font-style:normal;font-display:swap;font-weight:600;src:local('Estedad SemiBold'),local('Estedad-SemiBold'),url('https://cdn.jsdelivr.net/npm/@fontsource/estedad@5.3.0/files/estedad-latin-600-normal.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+`;
+
+    const ROLES = ['text', 'code', 'terminal'];
+    const VARIABLES = {
+      text: '--dsh-font-family-text',
+      code: '--dsh-font-family-code',
+      terminal: '--dsh-font-family-terminal',
+    };
+
+    /** First-run values; the Settings fields override them per role when filled. */
+    const DEFAULTS = {
+      text: 'Estedad, Vazirmatn, -apple-system, "Segoe UI", sans-serif',
+      code: '',
+      terminal: '',
+    };
+
+    const CSS = `
+.dcf-root{display:flex;flex-direction:column;gap:12px;color:var(--dsw-alias-label-primary);font-size:13px;line-height:20px}
+.dcf-heading{margin:0;font-size:14px;font-weight:500;line-height:20px}
+.dcf-hint{margin:0;color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}
+.dcf-field{display:flex;flex-direction:column;gap:2px}
+.dcf-title{font-weight:500}
+.dcf-desc{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}
+.dcf-input{margin-top:6px;height:36px;padding:0 12px;border:.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-md);background:var(--dsw-alias-bg-layer-3);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;outline:none;box-sizing:border-box;width:100%}
+.dcf-input:focus{border-color:var(--dsw-alias-state-business-primary);box-shadow:inset 0 0 0 .5px var(--dsw-alias-state-business-primary)}
+.dcf-input::placeholder{color:var(--dsw-alias-label-caption)}
+`;
+
+    const DICT = {
+      en: {
+        title: 'Fonts',
+        hint: 'Applied unless the Appearance font fields are filled in. Leave a field empty to use the built-in stack.',
+        placeholder: 'Built-in',
+        'font.text.title': 'Text font',
+        'font.text.description': 'Interface and conversation text.',
+        'font.code.title': 'Code font',
+        'font.code.description': 'Code blocks, inline code, and tool output.',
+        'font.terminal.title': 'Terminal font',
+        'font.terminal.description': 'Sidebar terminal.',
+        summary: 'Custom fonts',
+      },
+      zh: {
+        title: '字体',
+        hint: '仅在“外观”字体字段为空时生效；留空则使用内置字体栈。',
+        placeholder: '内置',
+        'font.text.title': '正文字体',
+        'font.text.description': '用于界面与会话正文。',
+        'font.code.title': '代码字体',
+        'font.code.description': '用于代码块、行内代码与工具输出。',
+        'font.terminal.title': '终端字体',
+        'font.terminal.description': '用于侧栏终端。',
+        summary: '自定义字体',
+      },
+    };
+
+    function loadStacks() {
+      const stacks = { ...DEFAULTS };
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw === null) return stacks;
+        const saved = JSON.parse(raw);
+        for (const role of ROLES) {
+          if (typeof saved?.[role] === 'string') stacks[role] = saved[role];
+        }
+      } catch {
+        /* corrupted or unavailable storage falls back to defaults */
+      }
+      return stacks;
+    }
+
+    let stacks = loadStacks();
+    let styleElement = null;
+
+    function fontCss() {
+      const declarations = [];
+      for (const role of ROLES) {
+        const value = String(stacks[role] ?? '').trim();
+        if (value !== '') declarations.push(`${VARIABLES[role]}:${value};`);
+      }
+      return FONTS_CSS + CSS + (declarations.length === 0 ? '' : `body{${declarations.join('')}}`);
+    }
+
+    function paint() {
+      if (styleElement !== null) styleElement.textContent = fontCss();
+    }
+
+    function persist(next) {
+      stacks = next;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stacks));
+      } catch {
+        /* ignore quota/private-mode failures: the in-memory value still applies */
+      }
+      paint();
+    }
+
+    function FontFields({ view, t }) {
+      const [state, setState] = React.useState(stacks);
+
+      if (view === 'summary') {
+        return h('span', null, t('summary'));
+      }
+
+      const commit = (role, value) => {
+        const next = { ...state, [role]: value };
+        setState(next);
+        persist(next);
+      };
+
+      return h(
+        'div',
+        { className: 'dcf-root' },
+        h('h3', { className: 'dcf-heading', key: 'title' }, t('title')),
+        h('p', { className: 'dcf-hint', key: 'hint' }, t('hint')),
+        ...ROLES.map((role) =>
+          h(
+            'label',
+            { className: 'dcf-field', key: role },
+            h('span', { className: 'dcf-title' }, t(`font.${role}.title`)),
+            h('span', { className: 'dcf-desc' }, t(`font.${role}.description`)),
+            h('input', {
+              className: 'dcf-input',
+              type: 'text',
+              spellCheck: false,
+              autoComplete: 'off',
+              maxLength: 400,
+              placeholder: t('placeholder'),
+              'aria-label': t(`font.${role}.title`),
+              value: state[role],
+              onChange: (event) => commit(role, event.currentTarget.value),
+              onKeyDown: (event) => {
+                if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+                if (event.key === 'Enter') event.currentTarget.blur();
+              },
+            }),
+          ),
+        ),
+      );
+    }
+
+    return {
+      inject: ['slots', 'locale'],
+      apply(ctx) {
+        ctx.effect(() => {
+          styleElement = document.createElement('style');
+          styleElement.dataset.dshCustomFont = '';
+          document.head.appendChild(styleElement);
+          paint();
+
+          const disposers = [
+            ctx.locale.register(NS, DICT),
+            ctx.slots.inject('plugins.bundle.config', () =>
+              ctx.slots.register(
+                { name: 'plugins.bundle.config', key: 'dsh-custom-font', locale: NS },
+                FontFields,
+              ),
+            ),
+          ];
+
+          return () => {
+            for (const dispose of disposers) dispose();
+            styleElement?.remove();
+            styleElement = null;
+          };
+        }, 'custom-font: fields, storage, and font stacks');
+      },
+    };
+  },
+});
